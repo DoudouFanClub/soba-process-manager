@@ -1,0 +1,71 @@
+﻿{
+  "LaunchSettings": [
+    {
+      "launcher": "python",
+      "args": "../../../../soba-inferer/tcp_core.py 127.0.0.1 7060 11434",
+      "wait": 0
+    },
+    {
+      "launcher": "python",
+      "args": "../../../../soba-inferer/tcp_core.py 127.0.0.1 7061 11435",
+      "wait": 0
+    },
+    {
+      "launcher": "python",
+      "args": "../../../../soba-inferer/tcp_core.py 127.0.0.1 7062 11436",
+      "wait": 0
+    },
+    {
+      "launcher": "docker",
+      "args": "start ollama_1",
+      "wait": 3
+    },
+    {
+      "launcher": "docker",
+      "args": "exec ollama_1 ollama run tinyllama:1.1b-chat-v0.6-q6_K",
+      "wait": 0
+    },
+    {
+      "launcher": "docker",
+      "args": "start ollama_2",
+      "wait": 3
+    },
+    {
+      "launcher": "docker",
+      "args": "exec ollama_2 ollama run tinyllama:1.1b-chat-v0.6-q6_K",
+      "wait": 0
+    },
+    {
+      "launcher": "docker",
+      "args": "start ollama_3",
+      "wait": 3
+    },
+    {
+      "launcher": "docker",
+      "args": "exec ollama_3 ollama run tinyllama:1.1b-chat-v0.6-q6_K",
+      "wait": 0
+    }
+  ],
+  "TerminateSettings": [
+    {
+      "launcher": "taskkill",
+      "args": "/IM python.exe /F",
+      "wait": 0
+    },
+    {
+      "launcher": "docker",
+      "args": "stop ollama_1",
+      "wait": 0
+    },
+    {
+      "launcher": "docker",
+      "args": "stop ollama_2",
+      "wait": 0
+    },
+    {
+      "launcher": "docker",
+      "args": "stop ollama_3",
+      "wait": 0
+    }
+  ]
+}
