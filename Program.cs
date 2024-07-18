@@ -29,7 +29,7 @@ using soba_process_manager.ConfigData;
 using System.Diagnostics;
 using System.Text.Json;
 
-string filePath = "../../../appSetting.json";
+string filePath = "AppSetting.json";
 
 if (!File.Exists(filePath))
 {
@@ -57,7 +57,7 @@ while (userTerminateStatus != "quit" && loadStatus)
 {
     Console.Write("Type 'quit' to terminate - ");
     userTerminateStatus = Console.ReadLine();
-    Initialize.EndFlag = true;
+    ProcessManager.EndFlag = true;
 }
 // Cleanup
 Terminate.Cleanup(config.TerminateSettings);
