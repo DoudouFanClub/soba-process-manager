@@ -8,8 +8,6 @@ namespace soba_process_manager.Api
     {
         private List<Process> Processes { get; set; }
 
-        private Thread? ManagerThread { get; set; } 
-
         private CancellationTokenSource Cts { get; set; } = new CancellationTokenSource();
 
         private InfererConfigStorage? Config { get; set; }
