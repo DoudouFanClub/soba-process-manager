@@ -1,56 +1,131 @@
 ﻿using soba_process_manager.ConfigData;
 using System.Diagnostics;
+using System.Text.Json;
 
 namespace soba_process_manager.Api
 {
     internal class ProcessManager
     {
-        public static bool EndFlag = false;
-        public static Thread CreateThreadedProcess(LaunchInfo info)
+        private List<Process> Processes { get; set; }
+
+        private Thread? ManagerThread { get; set; } 
+
+        private CancellationTokenSource Cts { get; set; } = new CancellationTokenSource();
+
+        private InfererConfigStorage? Config { get; set; }
+
+
+        internal ProcessManager()
         {
-            Thread process = new Thread(() => StartProcess(info));
-            process.Start();
-            Thread.Sleep(info.Wait * 1000);
-            return process;
+            string filePath = "appSetting.json";
+
+            if (!File.Exists(filePath))
+            {
+                throw new FileNotFoundException("The configuration file was not found.", filePath);
+            }
+
+            // Load The Config File
+            string jsonString = File.ReadAllText(filePath);
+            Config = JsonSerializer.Deserialize<InfererConfigStorage>(jsonString);
+            Processes = [];
         }
 
-        public static void StartProcess(LaunchInfo info)
+        public void Init()
         {
-            // Use /k if we want to show the terminal
-            ProcessStartInfo startInfo = new ProcessStartInfo
+            if (Config == null)
             {
-                FileName = "cmd.exe",
-                Arguments = info.AutoCloseConsole ? $"/k {info.Launcher} {info.Args}" : $"/c {info.Launcher} {info.Args}",
-                UseShellExecute = true,
-                CreateNoWindow = info.ShowConsole
-            };
+                Console.WriteLine("Config file doesn't exist");
+                return;
+            }
 
-            if (info.Persistent) Console.WriteLine("Launched Persistent Process: {0} {1}", info.Launcher, info.Args);
-            else Console.WriteLine("Launched Process: {0} {1}", info.Launcher, info.Args);
-
-            using (Process process = new Process { StartInfo = startInfo })
+            foreach (var info in Config.LaunchSettings) 
             {
-                process.OutputDataReceived += (sender, e) => Console.WriteLine(e.Data);
-                process.ErrorDataReceived += (sender, e) => Console.WriteLine($"Error: {e.Data}");
-
-                // Run this only once when we Terminate
-                // (Shutdown Python.exe)
-                if (EndFlag) process.Start();
-                else
+                var startInfo = new ProcessStartInfo
                 {
-                    // Normal Running Process - Start Once
-                    if (!info.Persistent)
-                    {
-                        process.Start();
-                    }
-                    // Normal Running Process - Persistent Process
-                    while (!EndFlag && info.Persistent)
-                    {
-                        process.Start();
-                        process.WaitForExit();
-                    }
-                }
+                    FileName = "cmd.exe",
+                    Arguments = info.AutoCloseConsole ? $"/k {info.Launcher} {info.Args}" : $"/c {info.Launcher} {info.Args}",
+                    UseShellExecute = true,
+                    CreateNoWindow = info.ShowConsole,
+                };
+
+                var process = new Process {  StartInfo = startInfo };
+
+                process.OutputDataReceived += (_, e) => Console.WriteLine(e.Data);
+                process.ErrorDataReceived += (_, e) => Console.WriteLine($"Error: {e.Data}");
+
+                Processes.Add(process);
             }
         }
+
+        public void Start()
+        {
+            int index = 0;
+            foreach (var process in Processes)
+            {
+                process.Start();
+                Console.WriteLine($"Process started: {Config.LaunchSettings[index].Launcher} {Config.LaunchSettings[index].Args}");
+                ++index;
+            }
+
+
+            var task = Task.Run(() =>
+            {
+                Manage();
+            }, Cts.Token);
+
+        }
+
+        public void End()
+        {
+            Cts.Cancel();
+
+            int i = 0;
+
+            foreach (var process in Processes)
+            {
+                if (Config.LaunchSettings[i].Launcher == "python")
+                {
+                    process.WaitForExit();
+                    process.Close();
+                }
+                ++i;
+            }
+
+            foreach (var terminateSetting in Config.TerminateSettings)
+            {
+                var endInfo = new ProcessStartInfo
+                {
+                    FileName = "cmd.exe",
+                    Arguments = terminateSetting.AutoCloseConsole ? $"/k {terminateSetting.Launcher} {terminateSetting.Args}" : $"/c {terminateSetting.Launcher} {terminateSetting.Args}",
+                    UseShellExecute = true,
+                    CreateNoWindow = terminateSetting.ShowConsole
+                };
+
+                using (var process = new Process { StartInfo = endInfo })
+                {
+                    process.Start();
+                    process.WaitForExit();
+                }
+            }
+
+        }
+        
+        private void Manage()
+        {
+            while (!Cts.IsCancellationRequested)
+            {
+                int i = 0;
+                foreach (var process in Processes)
+                {
+                    if (process.HasExited && Config.LaunchSettings[i].Persistent)
+                    {
+                        process.Start();
+                    }
+                    ++i;
+                }
+                Thread.Sleep(1000);
+            }
+        }
+
     }
 }

@@ -28,9 +28,9 @@ namespace soba_process_manager.ConfigData
     public class InfererConfigStorage
     {
         [JsonPropertyName("LaunchSettings")]
-        public List<LaunchInfo> LaunchSettings { get; set; }
+        public List<LaunchInfo> LaunchSettings { get; set; } = new List<LaunchInfo>();
 
         [JsonPropertyName("TerminateSettings")]
-        public List<LaunchInfo> TerminateSettings { get; set; }
+        public List<LaunchInfo> TerminateSettings { get; set; } = new List<LaunchInfo>();
     }
 }
